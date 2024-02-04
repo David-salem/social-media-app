@@ -1,18 +1,42 @@
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "lib/firebase";
-import { useState } from "react";
-import { DASHBOARD } from "lib/routes";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { useAuthState, useSignOut } from "react-firebase-hooks/auth";
+import { auth, db } from "lib/firebase";
+import { useState, useEffect } from "react";
+import { DASHBOARD, LOGIN } from "lib/routes";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { useToast } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
+import { setDoc, doc, getDoc } from "firebase/firestore";
+import isUsernameExists from "utils/isUsernameExists";
 
 export function useAuth() {
-  const [authUser, isLoading, error] = useAuthState(auth);
+  const [authUser, authLoading, error] = useAuthState(auth);
+  const [isLoading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
-  return { user: null, isLoading, error };
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      const ref = doc(db, "users", authUser.uid);
+      const docSnap = await getDoc(ref);
+      setUser(docSnap.data());
+      console.log(docSnap.data());
+      setLoading(false);
+    }
+    console.log(authUser);
+
+    if (!authLoading) {
+      if (authUser) fetchData();
+      else setLoading(false);
+    }
+  }, [authLoading]);
+
+  return { user, isLoading, error };
 }
 
-export function useLoading() {
+export function useLogin() {
   const [isLoading, setLoading] = useState(false);
   const toast = useToast();
   const navigate = useNavigate();
@@ -34,10 +58,12 @@ export function useLoading() {
       toast({
         title: "Logging in failed",
         description: err.message,
+        status: "error",
         isClosable: true,
         position: "top",
         duration: 5000,
       });
+      setLoading(false);
       return false;
     }
     setLoading(false);
@@ -45,4 +71,108 @@ export function useLoading() {
   }
 
   return { login, isLoading };
+}
+
+export function useLogout() {
+  const [signOut, isLoading, error] = useSignOut(auth);
+  const toast = useToast();
+  const navigate = useNavigate();
+
+  async function logout() {
+    try {
+      const signedOut = await signOut();
+      if (signedOut) {
+        toast({
+          title: "Successfully logged out",
+          status: "success",
+          isClosable: true,
+          position: "top",
+          duration: 5000,
+        });
+        navigate(LOGIN);
+      } else {
+        toast({
+          title: "Problem logging out",
+          status: "error",
+          isClosable: true,
+          position: "top",
+          duration: 5000,
+        });
+      }
+    } catch (err) {
+      toast({
+        title: `Error logging out: ${error.message}`,
+        status: "error",
+        isClosable: true,
+        position: "top",
+        duration: 5000,
+      });
+      console.error("Error logging out:", error.message);
+    }
+  }
+
+  return { logout, isLoading };
+}
+
+export function useRegister() {
+  const [isLoading, setLoading] = useState(false);
+  const toast = useToast();
+  const navigate = useNavigate();
+
+  async function register({
+    username,
+    email,
+    password,
+    redirectTo = DASHBOARD,
+  }) {
+    setLoading(true);
+
+    const usernameExists = await isUsernameExists(username);
+
+    if (usernameExists) {
+      toast({
+        title: "Username already exists",
+        status: "error",
+        isClosable: true,
+        position: "top",
+        duration: 5000,
+      });
+      setLoading(false);
+    } else {
+      try {
+        const res = await createUserWithEmailAndPassword(auth, email, password);
+
+        await setDoc(doc(db, "users", res.user.uid), {
+          id: res.user.uid,
+          username: username.toLowerCase(),
+          avatar: "",
+          date: Date.now(),
+        });
+        toast({
+          title: "Account created",
+          description: "You are logged in",
+          status: "success",
+          isClosable: true,
+          position: "top",
+          duration: 5000,
+        });
+        navigate(redirectTo);
+      } catch (err) {
+        toast({
+          title: "Signing Up failed",
+          description: err.message,
+          status: "error",
+          isClosable: true,
+          position: "top",
+          duration: 5000,
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    setLoading(false);
+  }
+
+  return { register, isLoading };
 }
