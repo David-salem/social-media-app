@@ -22,10 +22,8 @@ export function useAuth() {
       const ref = doc(db, "users", authUser.uid);
       const docSnap = await getDoc(ref);
       setUser(docSnap.data());
-      console.log(docSnap.data());
       setLoading(false);
     }
-    console.log(authUser);
 
     if (!authLoading) {
       if (authUser) fetchData();
@@ -107,7 +105,6 @@ export function useLogout() {
         position: "top",
         duration: 5000,
       });
-      console.error("Error logging out:", error.message);
     }
   }
 
