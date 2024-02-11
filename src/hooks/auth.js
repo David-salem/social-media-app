@@ -1,11 +1,11 @@
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from "firebase/auth";
 import { useAuthState, useSignOut } from "react-firebase-hooks/auth";
 import { auth, db } from "lib/firebase";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { DASHBOARD, LOGIN } from "lib/routes";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
 import { useToast } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { setDoc, doc, getDoc } from "firebase/firestore";
@@ -27,7 +27,7 @@ export function useAuth() {
 
     if (!authLoading) {
       if (authUser) fetchData();
-      else setLoading(false);
+      else setLoading(false); // Not signed in
     }
   }, [authLoading]);
 
@@ -52,63 +52,22 @@ export function useLogin() {
         duration: 5000,
       });
       navigate(redirectTo);
-    } catch (err) {
+    } catch (error) {
       toast({
         title: "Logging in failed",
-        description: err.message,
+        description: error.message,
         status: "error",
         isClosable: true,
         position: "top",
         duration: 5000,
       });
       setLoading(false);
-      return false;
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    return true;
   }
 
   return { login, isLoading };
-}
-
-export function useLogout() {
-  const [signOut, isLoading, error] = useSignOut(auth);
-  const toast = useToast();
-  const navigate = useNavigate();
-
-  async function logout() {
-    try {
-      const signedOut = await signOut();
-      if (signedOut) {
-        toast({
-          title: "Successfully logged out",
-          status: "success",
-          isClosable: true,
-          position: "top",
-          duration: 5000,
-        });
-        navigate(LOGIN);
-      } else {
-        toast({
-          title: "Problem logging out",
-          status: "error",
-          isClosable: true,
-          position: "top",
-          duration: 5000,
-        });
-      }
-    } catch (err) {
-      toast({
-        title: `Error logging out: ${error.message}`,
-        status: "error",
-        isClosable: true,
-        position: "top",
-        duration: 5000,
-      });
-    }
-  }
-
-  return { logout, isLoading };
 }
 
 export function useRegister() {
@@ -145,6 +104,7 @@ export function useRegister() {
           avatar: "",
           date: Date.now(),
         });
+
         toast({
           title: "Account created",
           description: "You are logged in",
@@ -153,11 +113,12 @@ export function useRegister() {
           position: "top",
           duration: 5000,
         });
+
         navigate(redirectTo);
-      } catch (err) {
+      } catch (error) {
         toast({
           title: "Signing Up failed",
-          description: err.message,
+          description: error.message,
           status: "error",
           isClosable: true,
           position: "top",
@@ -167,9 +128,28 @@ export function useRegister() {
         setLoading(false);
       }
     }
-
-    setLoading(false);
   }
 
   return { register, isLoading };
+}
+
+export function useLogout() {
+  const [signOut, isLoading, error] = useSignOut(auth);
+  const toast = useToast();
+  const navigate = useNavigate();
+
+  async function logout() {
+    if (await signOut()) {
+      toast({
+        title: "Successfully logged out",
+        status: "success",
+        isClosable: true,
+        position: "top",
+        duration: 5000,
+      });
+      navigate(LOGIN);
+    } // else: show error [signOut() returns false if failed]
+  }
+
+  return { logout, isLoading };
 }

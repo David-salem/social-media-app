@@ -1,5 +1,5 @@
 import { Flex, IconButton } from "@chakra-ui/react";
-import React from "react";
+import { useAuth } from "hooks/auth";
 import {
   FaRegHeart,
   FaHeart,
@@ -7,22 +7,25 @@ import {
   FaRegComment,
   FaTrash,
 } from "react-icons/fa";
-import { useAuth } from "hooks/auth";
-import { useToggleLike } from "hooks/posts";
+import { useToggleLike, useDeletePost } from "hooks/posts";
 import { Link } from "react-router-dom";
 import { PROTECTED } from "lib/routes";
+import { useComments } from "hooks/comments";
 
 export default function Actions({ post }) {
-  const { likes, id } = post;
+  const { id, likes, uid } = post;
   const { user, isLoading: userLoading } = useAuth();
 
   const isLiked = likes.includes(user?.id);
-
-  const { toggleLike, isLoading: likeLoading } = useToggleLike({
+  const config = {
     id,
     isLiked,
     uid: user?.id,
-  });
+  };
+
+  const { toggleLike, isLoading: likeLoading } = useToggleLike(config);
+  const { deletePost, isLoading: deleteLoading } = useDeletePost(id);
+  const { comments, isLoading: commentsLoading } = useComments(id);
 
   return (
     <Flex p="2">
@@ -42,23 +45,28 @@ export default function Actions({ post }) {
         <IconButton
           as={Link}
           to={`${PROTECTED}/comments/${id}`}
+          isLoading={commentsLoading}
           size="md"
           colorScheme="teal"
           variant="ghost"
+          icon={comments?.length === 0 ? <FaRegComment /> : <FaComment />}
           isRound
-          icon={<FaRegComment />}
         />
-        0
+        {comments?.length}
       </Flex>
 
-      <IconButton
-        ml="auto"
-        size="md"
-        colorScheme="red"
-        variant="ghost"
-        isRound
-        icon={<FaTrash />}
-      />
+      {!userLoading && user.id === uid && (
+        <IconButton
+          ml="auto"
+          onClick={deletePost}
+          isLoading={deleteLoading}
+          size="md"
+          colorScheme="red"
+          variant="ghost"
+          icon={<FaTrash />}
+          isRound
+        />
+      )}
     </Flex>
   );
 }
