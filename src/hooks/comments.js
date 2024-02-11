@@ -42,7 +42,7 @@ export function useComments(postID) {
   const q = query(
     collection(db, "comments"),
     where("postID", "==", postID),
-    orderBy("date", "asc")
+    orderBy("date", "desc")
   );
   const [comments, isLoading, error] = useCollectionData(q);
   if (error) throw error;
