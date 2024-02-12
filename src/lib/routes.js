@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
+import { useAuth } from "hooks/auth";
 
 import Login from "components/auth/Login";
 import Register from "components/auth/Register";
@@ -19,7 +20,7 @@ export const PROFILE = "/protected/profile/:id";
 export const COMMENTS = "/protected/comments/:id";
 
 export const router = createBrowserRouter([
-  { path: ROOT, element: "Public Root" },
+  { path: ROOT, element: <RootComponent /> },
   { path: LOGIN, element: <Login /> },
   { path: REGISTER, element: <Register /> },
   {
@@ -45,3 +46,8 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+
+function RootComponent() {
+  const { user } = useAuth();
+  return user ? <Dashboard /> : <Login />;
+}
