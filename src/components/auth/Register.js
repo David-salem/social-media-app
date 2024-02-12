@@ -10,10 +10,13 @@ import {
   Text,
   Link,
 } from "@chakra-ui/react";
+import { useEffect } from "react";
 import { LOGIN, DASHBOARD } from "lib/routes";
 import { Link as RouterLink } from "react-router-dom";
 import { useRegister } from "hooks/auth";
 import { useForm } from "react-hook-form";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "hooks/auth";
 import {
   emailValidate,
   passwordValidate,
@@ -21,6 +24,9 @@ import {
 } from "utils/form-validate";
 
 export default function Register() {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user, isLoading: isRegisterLoading } = useAuth();
   const { register: signup, isLoading } = useRegister();
   const {
     register,
@@ -36,6 +42,12 @@ export default function Register() {
       redirectTo: DASHBOARD,
     });
   }
+
+  useEffect(() => {
+    if (pathname.startsWith("/register") && user && !isRegisterLoading) {
+      navigate(DASHBOARD);
+    }
+  }, [pathname, user, isRegisterLoading]);
 
   return (
     <Center w="100%" h="100vh">
